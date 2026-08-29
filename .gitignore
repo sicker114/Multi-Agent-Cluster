@@ -1,0 +1,56 @@
+# ============ 通用 ============
+.DS_Store
+Thumbs.db
+*.log
+*.log.*.gz
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.cursor/
+.trae-cn/
+.history/
+
+# ============ 临时 / 敏感文件 ============
+项目笔记.txt
+_*.json
+*_ask.json
+*_login.json
+deploy/.env
+
+# ============ Java 后端 ============
+java-service/target/
+java-service/dependency-reduced-pom.xml
+java-service/build/
+java-service/out/
+java-service/.mvn/wrapper/
+.mvn_repo/
+logs/
+
+# ============ Python AI 服务 ============
+python-mcp-service/.venv/
+python-mcp-service/venv/
+python-mcp-service/env/
+python-mcp-service/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.python-version
+python-mcp-service/data/chroma/
+python-mcp-service/data/*.sqlite3
+python-mcp-service/data/checkpoints/
+python-mcp-service/data/cache/
+python-mcp-service/data/uploads/
+
+# ============ 前端 ============
+node_modules/
+dist/
+.cache/
+
+# ============ 系统 / 编辑器 ============
+*.swp
+*.swo
+*~

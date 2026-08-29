@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.enterprise.agent.mapper.BizSalesOrderMapper">
+
+    <!-- 按部门+时间区间聚合销售额与销量（只读统计，全参数化） -->
+    <select id="statSalesByPeriod" resultType="java.util.Map">
+        SELECT
+            product_name AS productName,
+            category     AS category,
+            SUM(quantity) AS totalQuantity,
+            SUM(amount)   AS totalAmount,
+            COUNT(*)      AS orderCount
+        FROM biz_sales_order
+        <where>
+            order_date BETWEEN #{startDate} AND #{endDate}
+            <if test="category != null and category != ''">
+                AND category = #{category}
+            </if>
+            <if test="deptIds != null and deptIds.size() > 0">
+                AND dept_id IN
+                <foreach collection="deptIds" item="deptId" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+        </where>
+        GROUP BY product_name, category
+        ORDER BY totalAmount DESC
+    </select>
+
+    <!-- 按月聚合销售趋势（供同比/环比计算） -->
+    <select id="statMonthlyTrend" resultType="java.util.Map">
+        SELECT
+            DATE_FORMAT(order_date, '%Y-%m') AS statMonth,
+            SUM(quantity)                    AS totalQuantity,
+            SUM(amount)                      AS totalAmount
+        FROM biz_sales_order
+        <where>
+            order_date BETWEEN #{startDate} AND #{endDate}
+            <if test="category != null and category != ''">
+                AND category = #{category}
+            </if>
+            <if test="deptIds != null and deptIds.size() > 0">
+                AND dept_id IN
+                <foreach collection="deptIds" item="deptId" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+        </where>
+        GROUP BY DATE_FORMAT(order_date, '%Y-%m')
+        ORDER BY statMonth ASC
+    </select>
+
+</mapper>

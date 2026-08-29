@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>企业数字员工 · 数据分析集群</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%234f46e5'/><text x='50' y='68' font-family='Arial,sans-serif' font-size='52' font-weight='700' fill='white' text-anchor='middle'>AI</text></svg>"/>
+    <link rel="stylesheet" href="css/app.css"/>
+</head>
+<body>
+
+<!-- ==================== 登录视图 ==================== -->
+<section id="loginView" class="view view-login">
+    <div class="login-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="login-card">
+        <div class="login-brand">
+            <div class="brand-logo">🤖</div>
+            <div class="brand-text">
+                <h1>企业数字员工</h1>
+                <p>多智能体数据分析集群 · GraphRAG + Self-RAG + Judge 四维评审</p>
+            </div>
+        </div>
+
+        <form id="loginForm" class="login-form" autocomplete="off">
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input id="username" name="username" type="text" placeholder="请输入用户名" required/>
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input id="password" name="password" type="password" placeholder="请输入密码" required/>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
+                <span class="btn-text">登 录</span>
+                <span class="btn-loading" hidden>登录中...</span>
+            </button>
+            <p class="login-tip">默认账号 admin / admin123</p>
+        </form>
+
+        <div class="login-footer">
+            <span class="dot dot-green"></span> Java 8080
+            <span class="dot dot-blue"></span> Python MCP 8000
+            <span class="dot dot-purple"></span> GraphRAG
+        </div>
+    </div>
+</section>
+
+<!-- ==================== 对话视图 ==================== -->
+<section id="chatView" class="view view-chat" hidden>
+    <!-- 顶部栏 -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <span class="logo-mini">AI</span>
+            <span class="topbar-title">数字员工分析台</span>
+            <span class="badge" id="sessionBadge">会话: -</span>
+        </div>
+        <div class="topbar-right">
+            <button class="btn btn-ghost btn-sm" id="kbBtn" title="管理知识库文档">📁 知识库</button>
+            <span class="user-chip" id="userChip">👤 -</span>
+            <button class="btn btn-ghost btn-sm" id="logoutBtn">退出</button>
+        </div>
+    </header>
+
+    <div class="chat-layout">
+        <!-- 左侧：历史 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-head">
+                <h3>对话历史</h3>
+                <button class="btn btn-ghost btn-sm" id="newChatBtn" title="新会话">+ 新建</button>
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="history-empty">暂无历史记录</div>
+            </div>
+            <div class="sidebar-foot">
+                <div class="mcp-status" id="mcpStatus">
+                    <span class="dot dot-gray"></span> MCP 工具检测中
+                </div>
+            </div>
+        </aside>
+
+        <!-- 中间：对话主区 -->
+        <main class="chat-main">
+            <div class="chat-stream" id="chatStream">
+                <div class="welcome">
+                    <div class="welcome-icon">👋</div>
+                    <h2>欢迎使用企业数据分析集群</h2>
+                    <p>基于 GraphRAG 检索 + 多智能体协作 + 四维 Judge 评审的可信分析平台</p>
+                    <div class="suggest-list" id="suggestList">
+                        <button class="suggest-chip" data-q="分析2025年第一季度智能路由器X1的销售同比与库存风险">分析2025年Q1智能路由器X1的销售同比与库存风险</button>
+                        <button class="suggest-chip" data-q="对比华东与华南区域上月销售额Top5商品">对比华东与华南区域上月销售额Top5商品</button>
+                        <button class="suggest-chip" data-q="哪些SKU库存周转天数超过30天，给出清仓建议">哪些SKU库存周转天数超过30天，给出清仓建议</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-bar">
+                <div class="input-wrap">
+                    <textarea id="questionInput" placeholder="输入业务问题，例如：分析2025年Q1智能路由器X1的销售同比与库存风险" rows="2"></textarea>
+                    <button class="btn btn-primary" id="sendBtn" disabled>
+                        <span class="btn-text">发送</span>
+                    </button>
+                    <button class="btn btn-ghost" id="stopBtn" hidden>
+                        <span class="btn-text">⏹ 停止</span>
+                    </button>
+                </div>
+                <div class="input-hint">
+                    <span>流式 SSE · 打字机效果 · 四维评审</span>
+                    <span class="hint-mode" id="modeHint">按 Enter 发送 / Shift+Enter 换行</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- 右侧：Judge 四维面板 -->
+        <aside class="judge-panel" id="judgePanel">
+            <div class="panel-head">
+                <h3>🎯 Judge 四维评审</h3>
+            </div>
+            <div class="panel-body" id="judgeBody">
+                <div class="judge-empty">
+                    <p>提交分析后，<br/>四维评审将在此实时展示</p>
+                </div>
+            </div>
+            <div class="panel-foot" id="judgeFoot" hidden>
+                <div class="meta-row"><span>综合评分</span><span class="meta-val" id="overallScore">-</span></div>
+                <div class="meta-row"><span>是否通过</span><span class="meta-val" id="judgeVerdict">-</span></div>
+                <div class="meta-row"><span>耗时(ms)</span><span class="meta-val" id="judgeCost">-</span></div>
+                <div class="meta-row"><span>qaId</span><span class="meta-val meta-id" id="judgeQaId">-</span></div>
+            </div>
+        </aside>
+    </div>
+</section>
+
+<!-- 全局 Toast -->
+<div id="toast" class="toast" hidden></div>
+
+<!-- 知识库抽屉 -->
+<div id="kbMask" class="kb-mask" hidden></div>
+<aside id="kbDrawer" class="kb-drawer" hidden>
+    <div class="kb-head">
+        <h3>📁 知识库文档</h3>
+        <button class="btn btn-ghost btn-sm" id="kbCloseBtn">✕</button>
+    </div>
+    <div class="kb-upload">
+        <div class="dropzone" id="kbDropzone">
+            <input type="file" id="kbFileInput" hidden multiple accept=".pdf,.txt,.md,.docx,.doc,.csv,.xlsx">
+            <div class="dz-icon">⬆</div>
+            <p>点击选择文件或拖拽到此处</p>
+            <p class="dz-hint">支持 PDF / TXT / MD / DOCX / CSV / XLSX</p>
+        </div>
+        <div class="kb-cat-row">
+            <label>分类：</label>
+            <input type="text" id="kbCategory" placeholder="可选，如：产品手册 / 财报 / 技术文档" class="kb-cat-input">
+        </div>
+        <div class="kb-upload-bar" id="kbUploadBar" hidden>
+            <div class="kb-upload-progress"><div class="kb-upload-fill" id="kbUploadFill"></div></div>
+            <span class="kb-upload-text" id="kbUploadText">上传中...</span>
+        </div>
+    </div>
+    <div class="kb-list-head">
+        <h4>已上传文档</h4>
+        <button class="btn btn-ghost btn-sm" id="kbRefreshBtn">⟳ 刷新</button>
+    </div>
+    <div class="kb-list" id="kbList">
+        <div class="kb-empty">暂无文档</div>
+    </div>
+</aside>
+
+<script src="js/app.js"></script>
+</body>
+</html>

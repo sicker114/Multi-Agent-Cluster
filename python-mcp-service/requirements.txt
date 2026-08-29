@@ -1,0 +1,60 @@
+# ============================================================
+# 多智能体企业数字员工数据分析集群 - Python MCP AI 服务依赖
+# 仅提供多 Agent 推理能力，无独立业务存储
+# ============================================================
+
+# ---- MCP 协议标准 SDK（STDIO + HTTP/SSE 双传输） ----
+mcp==1.2.0
+
+# ---- LangGraph Harness 多智能体状态机 + Checkpoint ----
+langgraph==0.2.60
+langgraph-checkpoint==2.0.9
+langgraph-checkpoint-sqlite==2.0.1
+langchain==0.3.14
+langchain-core==0.3.29
+langchain-community==0.3.14
+langchain-openai==0.2.14
+
+# ---- LlamaIndex GraphRAG 知识图谱检索 ----
+llama-index==0.12.10
+llama-index-core==0.12.10
+llama-index-vector-stores-chroma==0.4.1
+llama-index-llms-openai==0.3.12
+llama-index-embeddings-openai==0.3.1
+# llama-index-graph-stores-simple not available on mirrors, removed
+
+# ---- Chroma 向量数据库 ----
+chromadb==0.5.23
+
+# ---- Ragas 自动评测（Judge 幻觉校验核心） ----
+ragas==0.2.9
+datasets==3.2.0
+
+# ---- LangSmith 全链路观测 ----
+langsmith==0.2.10
+
+# ---- LLM SDK（DeepSeek / OpenAI 兼容） ----
+openai==1.59.6
+
+# ---- 四层记忆共享（Redis 暂未接入） ----
+# redis==5.2.1
+
+# ---- 业务数据库直连（备用，主路径走 Java 内部接口） ----
+pymysql==1.1.1
+
+# ---- 文档解析 ----
+python-docx==1.1.2
+PyPDF2==3.0.1
+
+# ---- MCP Server HTTP/SSE 承载 ----
+starlette==0.41.3
+uvicorn==0.34.0
+sse-starlette==2.2.1
+httpx==0.28.1
+
+# ---- 工具 ----
+pydantic==2.10.4
+pydantic-settings==2.7.1
+python-dotenv==1.0.1
+tenacity==9.0.0
+numpy==1.26.4

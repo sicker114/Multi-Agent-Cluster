@@ -1,0 +1,143 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: enterprise-agent-service
+  # ==================== MySQL 数据源 ====================
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/enterprise_agent?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root123456}
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 30000
+      connection-timeout: 30000
+      max-lifetime: 1800000
+
+  # ==================== Redis 四层记忆 ====================
+  # 当前环境无 Redis，四层记忆走 LocalMemoryStore（ConcurrentHashMap + TTL 定时清理）
+  # 恢复 Redis 时取消下方注释 + 启动类去掉 RedisAutoConfiguration 排除 + 恢复 RedisConfig
+  # data:
+  #   redis:
+  #     host: ${REDIS_HOST:localhost}
+  #     port: ${REDIS_PORT:6379}
+  #     password: ${REDIS_PASSWORD:}
+  #     database: 0
+  #     timeout: 5000ms
+  #     lettuce:
+  #       pool:
+  #         max-active: 16
+  #         max-idle: 8
+  #         min-idle: 2
+  #         max-wait: 3000ms
+
+  # ==================== 文件上传大小限制 ====================
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+
+  # ==================== Spring AI + 标准 MCP Client ====================
+  ai:
+    openai:
+      # DeepSeek / OpenAI 兼容端点，ChatClient 用于将 MCP 工具编排为 Function Calling
+      api-key: ${LLM_API_KEY:sk-placeholder}
+      base-url: ${LLM_BASE_URL:https://api.deepseek.com}
+      chat:
+        options:
+          model: ${LLM_MODEL:deepseek-chat}
+          temperature: 0.2
+    mcp:
+      client:
+        enabled: false  # 禁用 Spring AI MCP 自动配置（启动时不强制连接 SSE）
+        # MCP 工具调用走 McpToolGateway WebClient 直连，不依赖 Spring AI 自动发现
+
+# ==================== MyBatis-Plus ====================
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.enterprise.agent.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# ==================== Knife4j 接口文档 ====================
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+    swagger-model-name: 数据模型
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+# ==================== 自定义业务配置 ====================
+enterprise:
+  # JWT 配置
+  jwt:
+    secret: ${JWT_SECRET:enterprise-agent-cluster-jwt-secret-key-must-be-long-enough-2026}
+    expire-seconds: 86400          # Token 有效期 24h
+    header: Authorization
+    prefix: "Bearer "
+  # 文件存储配置
+  file:
+    # local 或 minio
+    storage-type: ${FILE_STORAGE_TYPE:local}
+    local-path: ${FILE_LOCAL_PATH:./upload-files}
+    allow-extensions: pdf,doc,docx,txt
+    minio:
+      endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+      access-key: ${MINIO_ACCESS_KEY:minioadmin}
+      secret-key: ${MINIO_SECRET_KEY:minioadmin}
+      bucket: ${MINIO_BUCKET:enterprise-docs}
+  # 四层记忆 TTL（秒）
+  memory:
+    working-ttl: 600           # 工作内存 10 分钟
+    session-ttl: 3600          # 会话缓存 1 小时
+    long-term-ttl: 2592000     # 长期记忆 30 天
+    skill-ttl: 0               # 技能库永久（0 表示不过期）
+  # MCP 调用容错 + Python 内部数据面地址
+  mcp:
+    tool-name: enterprise_analysis          # Python 侧注册的主分析工具名（同步 MCP 控制面）
+    stream-tool-name: stream_enterprise_analysis  # 流式工具名（数据面走 HTTP SSE）
+    python-base-url: ${PYTHON_INTERNAL_URL:http://localhost:8001}  # Python 内部 HTTP 数据面地址（RAG/语义记忆/流式SSE，/internal/** 在 8001）
+    notify-index-path: /internal/rag/index-doc
+    timeout-ms: 60000
+    max-retry: 2                     # 失败重试次数
+    retry-interval-ms: 1500
+    circuit-breaker:
+      failure-threshold: 5           # 连续失败 5 次触发熔断
+      open-duration-ms: 30000        # 熔断打开 30s 后进入半开
+  # 接口限流：单用户每分钟请求数
+  rate-limit:
+    capacity: 30
+    refill-per-minute: 30
+  # 内部接口密钥：Python MCP 服务回调 Java /internal/** 时校验
+  internal:
+    api-key: ${INTERNAL_API_KEY:internal-secret-key-2026}
+    # Java 内部回调基础地址，供 Python 子 Agent 反向拉取文档/数据
+    callback-base-url: ${CALLBACK_BASE_URL:http://localhost:8080}
+
+# ==================== 日志 ====================
+logging:
+  level:
+    root: info
+    com.enterprise.agent: debug
+    org.springframework.ai: info
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId}] %logger{36} - %msg%n"
+  file:
+    name: ./logs/enterprise-agent-service.log

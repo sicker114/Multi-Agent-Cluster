@@ -1,0 +1,144 @@
+# ==========================================================
+# 多智能体企业数字员工数据分析集群 - 一键编排
+# 同时启动：MySQL8 + Redis7 + Java 主服务 + Python MCP AI 服务
+# 启动顺序：mysql/redis -> python-mcp -> java（依赖健康检查）
+# ==========================================================
+version: "3.9"
+
+services:
+  # ---------------- MySQL 8 ----------------
+  mysql:
+    image: mysql:8.0
+    container_name: ea-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: enterprise_agent
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # 首次启动自动执行建表 + 初始化数据脚本（compose 位于 deploy/，源码在上一级根目录）
+      - ../java-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - ea-net
+
+  # ---------------- Redis 7（四层记忆） ----------------
+  redis:
+    image: redis:7.2
+    container_name: ea-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - ea-net
+
+  # ---------------- Python MCP AI 服务 ----------------
+  python-mcp:
+    build:
+      context: ../python-mcp-service
+      dockerfile: Dockerfile
+    container_name: ea-python-mcp
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+      MCP_TRANSPORT: sse
+      MCP_HTTP_HOST: 0.0.0.0
+      MCP_HTTP_PORT: 8000
+      # LLM（DeepSeek/OpenAI 兼容），请通过 .env 覆盖真实密钥
+      LLM_API_KEY: ${LLM_API_KEY:-sk-placeholder}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-sk-placeholder}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      # Java 内部回调（容器内通过服务名互访）
+      CALLBACK_BASE_URL: http://java-service:8080
+      INTERNAL_API_KEY: internal-secret-key-2026
+      # Redis 共享记忆
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # 数据持久目录
+      CHROMA_PERSIST_DIR: /app/data/chroma
+      CHECKPOINT_DB: /app/data/checkpoints/graph_state.sqlite
+      # 观测（可选）
+      LANGCHAIN_TRACING_V2: ${LANGCHAIN_TRACING_V2:-false}
+      LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY:-}
+      CONFIDENCE_THRESHOLD: "60"
+      MAX_REFLECTION_RETRY: "2"
+    ports:
+      - "8000:8000"
+    volumes:
+      - python-data:/app/data
+    networks:
+      - ea-net
+
+  # ---------------- Java 主服务 ----------------
+  java-service:
+    build:
+      context: ../java-service
+      dockerfile: Dockerfile
+    container_name: ea-java
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root123456
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      # 远程调用 Python MCP Server（SSE 传输）
+      MCP_SERVER_URL: http://python-mcp:8000
+      INTERNAL_API_KEY: internal-secret-key-2026
+      CALLBACK_BASE_URL: http://java-service:8080
+      LLM_API_KEY: ${LLM_API_KEY:-sk-placeholder}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
+      JWT_SECRET: enterprise-agent-cluster-jwt-secret-key-must-be-long-enough-2026
+      FILE_STORAGE_TYPE: local
+    ports:
+      - "8080:8080"
+    volumes:
+      - java-upload:/app/upload-files
+      - java-logs:/app/logs
+    networks:
+      - ea-net
+
+networks:
+  ea-net:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:
+  python-data:
+  java-upload:
+  java-logs:
