@@ -26,16 +26,16 @@ logger = logging.getLogger(__name__)
 
 # 允许的只读查询类型（与 Java BusinessDataService 参数化接口对齐）
 _ALLOWED_QUERY_TYPES = {
-    "SALES_BY_PERIOD",     # 周期销售统计
-    "MONTHLY_TREND",       # 月度趋势
+    "SALES_PERIOD",     # 周期销售统计
+    "SALES_TREND",       # 月度趋势
     "INVENTORY",           # 库存快照
     "RAW_SQL",             # 受 SqlSafetyGuard 拦截的只读 SQL
 }
 
 _PLAN_SYSTEM_PROMPT = """你是企业数据查询规划助手。请把用户的自然语言业务需求，转换为一个结构化只读查询计划。
 只能使用以下查询类型之一：
-- SALES_BY_PERIOD：按时间区间统计销售额、订单量（需 startDate、endDate，格式 YYYY-MM-DD）
-- MONTHLY_TREND：按月统计销售趋势（可选 startDate、endDate）
+- SALES_PERIOD：按时间区间统计销售额、订单量（需 startDate、endDate，格式 YYYY-MM-DD）
+- SALES_TREND：按月统计销售趋势（可选 startDate、endDate）
 - INVENTORY：查询库存快照（可选 statDate，格式 YYYY-MM-DD；可选 category 商品类别）
 - RAW_SQL：仅当以上都不满足时，生成只读 SELECT 语句（禁止 DELETE/UPDATE/DROP/ALTER/TRUNCATE/INSERT）
 
@@ -121,7 +121,7 @@ class SqlDataAgent:
         query_type = (plan.get("queryType") or "").strip().upper()
         if query_type not in _ALLOWED_QUERY_TYPES:
             # 无法识别时默认走销售周期统计，避免链路中断
-            query_type = "SALES_BY_PERIOD"
+            query_type = "SALES_PERIOD"
         plan["queryType"] = query_type
 
         # RAW_SQL 只读白名单预校验（Java 端仍会二次拦截）
@@ -140,11 +140,11 @@ class SqlDataAgent:
         text = re.sub(r"^```(?:json)?|```$", "", text, flags=re.MULTILINE).strip()
         match = re.search(r"\{.*\}", text, flags=re.DOTALL)
         if not match:
-            return {"queryType": "SALES_BY_PERIOD"}
+            return {"queryType": "SALES_PERIOD"}
         try:
             return json.loads(match.group(0))
         except json.JSONDecodeError:
-            return {"queryType": "SALES_BY_PERIOD"}
+            return {"queryType": "SALES_PERIOD"}
 
     @staticmethod
     def _is_readonly_sql(sql: str) -> bool:

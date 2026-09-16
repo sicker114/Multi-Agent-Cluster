@@ -16,11 +16,14 @@ Thumbs.db
 项目笔记.txt
 _*.json
 *_ask.json
+test_ask*.json
 *_login.json
+reset_pw.sql
 deploy/.env
 
 # ============ Java 后端 ============
 java-service/target/
+java-service/BOOT-INF/
 java-service/dependency-reduced-pom.xml
 java-service/build/
 java-service/out/
